@@ -187,6 +187,10 @@ fn dark_css() -> &'static str {
         border-color: #58a6ff;
         box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
     }
+    .freq-entry.error {
+        border-color: #f85149;
+        box-shadow: 0 0 0 2px rgba(248, 81, 73, 0.2);
+    }
 
     .freq-unit-combo {
         background-color: #0d1117;
@@ -443,6 +447,10 @@ fn light_css() -> &'static str {
     .freq-entry:focus {
         border-color: #0969da;
         box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.2);
+    }
+    .freq-entry.error {
+        border-color: #cf222e;
+        box-shadow: 0 0 0 2px rgba(207, 34, 46, 0.2);
     }
 
     .freq-unit-combo {
@@ -1257,17 +1265,20 @@ pub fn build_ui(app: &Application) {
         let unit_combo = ch1_freq_unit.clone();
         let adj = ch1_freq_adj.clone();
         
+        // Configurar Entry para solo aceptar números
+        entry.set_input_purpose(gtk4::InputPurpose::Number);
+        
         // Flag para evitar actualizaciones mientras el usuario edita
         let is_editing = Rc::new(RefCell::new(false));
         
-        // Controller para detectar foco y seleccionar todo el texto
+        // Controller para detectar foco y posicionar cursor al final
         let focus_controller = gtk4::EventControllerFocus::new();
         let is_editing_in = is_editing.clone();
-        let entry_sel = entry.clone();
+        let entry_cursor = entry.clone();
         focus_controller.connect_enter(move |_| {
             *is_editing_in.borrow_mut() = true;
-            // Seleccionar todo el texto para facilitar edición
-            entry_sel.select_region(0, -1);
+            // Posicionar cursor al final del texto
+            entry_cursor.set_position(-1);
         });
         let is_editing_out = is_editing.clone();
         focus_controller.connect_leave(move |_| {
@@ -1279,19 +1290,29 @@ pub fn build_ui(app: &Application) {
         let adj2 = adj.clone();
         let unit_combo2 = unit_combo.clone();
         let is_editing_enter = is_editing.clone();
+        let entry_error = entry.clone();
         entry.connect_activate(move |e| {
             *is_editing_enter.borrow_mut() = false;
             let text = e.text().to_string();
             let unit = unit_combo2.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
-            if let Ok(val) = text.parse::<f64>() {
-                let hz = match unit.as_str() {
-                    "khz" => val * 1_000.0,
-                    "mhz" => val * 1_000_000.0,
-                    _ => val,
-                };
-                let hz = hz.clamp(FREQ_MIN_HZ, FREQ_MAX_HZ);
-                adj2.set_value(hz);
-                // connect_value_changed se encargará de enviar al generador
+            
+            // Validar que sea un número válido
+            match text.parse::<f64>() {
+                Ok(val) => {
+                    let hz = match unit.as_str() {
+                        "khz" => val * 1_000.0,
+                        "mhz" => val * 1_000_000.0,
+                        _ => val,
+                    };
+                    let hz = hz.clamp(FREQ_MIN_HZ, FREQ_MAX_HZ);
+                    adj2.set_value(hz);
+                    entry_error.remove_css_class("error");
+                }
+                Err(_) => {
+                    // Mostrar error visual si no es un número válido
+                    entry_error.add_css_class("error");
+                    eprintln!("[ERROR] Frecuencia inválida: '{}'. Solo se aceptan números.", text);
+                }
             }
         });
         
@@ -1422,17 +1443,20 @@ pub fn build_ui(app: &Application) {
         let unit_combo = ch2_freq_unit.clone();
         let adj = ch2_freq_adj.clone();
         
+        // Configurar Entry para solo aceptar números
+        entry.set_input_purpose(gtk4::InputPurpose::Number);
+        
         // Flag para evitar actualizaciones mientras el usuario edita
         let is_editing = Rc::new(RefCell::new(false));
         
-        // Controller para detectar foco y seleccionar todo el texto
+        // Controller para detectar foco y posicionar cursor al final
         let focus_controller = gtk4::EventControllerFocus::new();
         let is_editing_in = is_editing.clone();
-        let entry_sel = entry.clone();
+        let entry_cursor = entry.clone();
         focus_controller.connect_enter(move |_| {
             *is_editing_in.borrow_mut() = true;
-            // Seleccionar todo el texto para facilitar edición
-            entry_sel.select_region(0, -1);
+            // Posicionar cursor al final del texto
+            entry_cursor.set_position(-1);
         });
         let is_editing_out = is_editing.clone();
         focus_controller.connect_leave(move |_| {
@@ -1444,19 +1468,29 @@ pub fn build_ui(app: &Application) {
         let adj2 = adj.clone();
         let unit_combo2 = unit_combo.clone();
         let is_editing_enter = is_editing.clone();
+        let entry_error = entry.clone();
         entry.connect_activate(move |e| {
             *is_editing_enter.borrow_mut() = false;
             let text = e.text().to_string();
             let unit = unit_combo2.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
-            if let Ok(val) = text.parse::<f64>() {
-                let hz = match unit.as_str() {
-                    "khz" => val * 1_000.0,
-                    "mhz" => val * 1_000_000.0,
-                    _ => val,
-                };
-                let hz = hz.clamp(FREQ_MIN_HZ, FREQ_MAX_HZ);
-                adj2.set_value(hz);
-                // connect_value_changed se encargará de enviar al generador
+            
+            // Validar que sea un número válido
+            match text.parse::<f64>() {
+                Ok(val) => {
+                    let hz = match unit.as_str() {
+                        "khz" => val * 1_000.0,
+                        "mhz" => val * 1_000_000.0,
+                        _ => val,
+                    };
+                    let hz = hz.clamp(FREQ_MIN_HZ, FREQ_MAX_HZ);
+                    adj2.set_value(hz);
+                    entry_error.remove_css_class("error");
+                }
+                Err(_) => {
+                    // Mostrar error visual si no es un número válido
+                    entry_error.add_css_class("error");
+                    eprintln!("[ERROR] Frecuencia inválida: '{}'. Solo se aceptan números.", text);
+                }
             }
         });
         
