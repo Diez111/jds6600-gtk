@@ -327,6 +327,14 @@ El JDS6600 tiene límites físicos que la aplicación respeta:
 
 ## Changelog
 
+### v0.2.1 — Protección de entrada de frecuencia
+
+**Correcciones críticas:**
+- Fix de edición interrumpida: el polling ya no actualiza el Entry mientras el usuario escribe
+- Uso de EventControllerFocus para detectar foco correctamente en GTK4
+- Validación de límites al cambiar unidad (Hz/kHz/MHz) para evitar valores inválidos
+- Clamp automático según límites del hardware al cambiar unidad
+
 ### v0.2.0 — Rediseño profesional y correcciones
 
 **UI/UX profesional:**
@@ -346,6 +354,8 @@ El JDS6600 tiene límites físicos que la aplicación respeta:
 - Conversión automática al presionar Enter
 - Actualización en tiempo real al cambiar unidad
 - Sincronización con presets y polling
+- **Protección contra edición interrumpida**: el polling no actualiza el campo mientras el usuario escribe
+- **Validación de límites**: al cambiar unidad, se clamp automáticamente para evitar valores inválidos (ej: 6 millones de MHz)
 
 **Auto-detección mejorada:**
 - Filtrado de puertos fantasma `ttyS*` (nativos del chipset)
