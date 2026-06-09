@@ -385,16 +385,15 @@ MIT License — ver archivo LICENSE para detalles.
 ## Capturas de pantalla
 
 *Modo oscuro:*
-```
+
 <img width="951" height="732" alt="image" src="https://github.com/user-attachments/assets/0d9374e9-4730-420a-9089-dac9494b834d" />
 
-```
 
 *Modo claro:*
-```
+
 <img width="981" height="757" alt="image" src="https://github.com/user-attachments/assets/787b2802-860d-4d21-81d7-dae940cb61ed" />
 
-```
+
 
 ---
 
