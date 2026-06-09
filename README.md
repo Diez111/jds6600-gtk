@@ -368,6 +368,10 @@ El JDS6600 tiene límites físicos que la aplicación respeta:
 - Fix de lectura serial: `BufReader::new(&mut **conn)` en vez de `try_clone()` (fallaba en CH340/FTDI)
 - Fix de preview: `queue_draw()` en callbacks de forma de onda y duty cycle
 - Fix de frecuencia: eliminado loop de polling que reenviaba frecuencia al generador
+- Fix de edición de frecuencia: el polling no interrumpe la edición del usuario
+  - Flags `is_editing` bloquean actualizaciones del SpinButton mientras se edita
+  - Cambio se aplica al presionar Enter o perder el foco
+  - `connect_value_changed` bloqueado durante edición manual
 - Timeout normalizado a 1 segundo (como el proyecto Python de referencia)
 - Delay post-conexión de 400ms para arranque del MCU
 
