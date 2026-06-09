@@ -36,6 +36,7 @@ Aplicación de escritorio nativa en **Rust + GTK4** para controlar generadores d
 - **Vista previa de osciloscopio** con grilla tipo instrumento (Cairo)
 - **Toast notifications** flotantes sobre `GtkOverlay`
 - **Switches nativos** para encendido/apagado de canales
+- **Entrada de frecuencia editable** con selección de unidades (Hz, kHz, MHz)
 - **Presets de frecuencia** rápidos: 50Hz, 100Hz, 1kHz, 10kHz, 100kHz, 1MHz, 10MHz
 - **Duty cycle inteligente**: se deshabilita automáticamente para formas de onda que no lo usan
 
@@ -338,6 +339,13 @@ El JDS6600 tiene límites físicos que la aplicación respeta:
 - Presets de frecuencia rápidos: 50Hz, 100Hz, 1kHz, 10kHz, 100kHz, 1MHz, 10MHz
 - Duty cycle se deshabilita automáticamente para formas de onda que no lo usan
 - Límites de hardware exactos en todos los ajustes
+
+**Entrada de frecuencia mejorada:**
+- Campo de texto editable para escribir frecuencia directamente
+- Selector de unidades: Hz, kHz, MHz
+- Conversión automática al presionar Enter
+- Actualización en tiempo real al cambiar unidad
+- Sincronización con presets y polling
 
 **Auto-detección mejorada:**
 - Filtrado de puertos fantasma `ttyS*` (nativos del chipset)
