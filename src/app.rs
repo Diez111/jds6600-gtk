@@ -1257,10 +1257,27 @@ pub fn build_ui(app: &Application) {
         let unit_combo = ch1_freq_unit.clone();
         let adj = ch1_freq_adj.clone();
         
+        // Flag para evitar actualizaciones mientras el usuario edita
+        let is_editing = Rc::new(RefCell::new(false));
+        
+        // Controller para detectar foco
+        let focus_controller = gtk4::EventControllerFocus::new();
+        let is_editing_in = is_editing.clone();
+        focus_controller.connect_enter(move |_| {
+            *is_editing_in.borrow_mut() = true;
+        });
+        let is_editing_out = is_editing.clone();
+        focus_controller.connect_leave(move |_| {
+            *is_editing_out.borrow_mut() = false;
+        });
+        entry.add_controller(focus_controller);
+        
         // Callback cuando el usuario presiona Enter en el Entry
         let adj2 = adj.clone();
         let unit_combo2 = unit_combo.clone();
+        let is_editing_enter = is_editing.clone();
         entry.connect_activate(move |e| {
+            *is_editing_enter.borrow_mut() = false;
             let text = e.text().to_string();
             let unit = unit_combo2.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
             if let Ok(val) = text.parse::<f64>() {
@@ -1275,7 +1292,7 @@ pub fn build_ui(app: &Application) {
             }
         });
         
-        // Callback cuando cambia la unidad
+        // Callback cuando cambia la unidad - con validación de límites
         let entry3 = entry.clone();
         let adj3 = adj.clone();
         unit_combo.connect_changed(move |combo| {
@@ -1286,15 +1303,34 @@ pub fn build_ui(app: &Application) {
                 "mhz" => hz / 1_000_000.0,
                 _ => hz,
             };
+            // Validar que el valor en la nueva unidad no exceda los límites
+            let max_val = match unit.as_str() {
+                "khz" => FREQ_MAX_HZ / 1_000.0,
+                "mhz" => FREQ_MAX_HZ / 1_000_000.0,
+                _ => FREQ_MAX_HZ,
+            };
+            let min_val = match unit.as_str() {
+                "khz" => FREQ_MIN_HZ / 1_000.0,
+                "mhz" => FREQ_MIN_HZ / 1_000_000.0,
+                _ => FREQ_MIN_HZ,
+            };
+            let val = val.clamp(min_val, max_val);
             entry3.set_text(&format!("{:.4}", val).trim_end_matches('0').trim_end_matches('.').to_string());
         });
         
-        // Callback cuando cambia el adjustment (desde presets o polling)
+        // Callback cuando cambia el adjustment (desde presets o entrada manual)
         let entry4 = entry.clone();
         let unit_combo4 = unit_combo.clone();
         let drv4 = drv.clone();
+        let is_editing_update = is_editing.clone();
         adj.connect_value_changed(move |a| {
+            // No actualizar el Entry si el usuario está editando
+            if *is_editing_update.borrow() {
+                return;
+            }
+            
             let hz = a.value();
+            eprintln!("[DEBUG CH1] connect_value_changed disparado: {} Hz", hz);
             let unit = unit_combo4.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
             let val = match unit.as_str() {
                 "khz" => hz / 1_000.0,
@@ -1305,6 +1341,7 @@ pub fn build_ui(app: &Application) {
             let drv = drv4.clone();
             std::thread::spawn(move || {
                 let mut d = drv.lock().unwrap();
+                eprintln!("[DEBUG CH1] Enviando set_frequency(1, {}) al generador", hz);
                 let _ = d.set_frequency(1, hz);
             });
         });
@@ -1382,10 +1419,27 @@ pub fn build_ui(app: &Application) {
         let unit_combo = ch2_freq_unit.clone();
         let adj = ch2_freq_adj.clone();
         
+        // Flag para evitar actualizaciones mientras el usuario edita
+        let is_editing = Rc::new(RefCell::new(false));
+        
+        // Controller para detectar foco
+        let focus_controller = gtk4::EventControllerFocus::new();
+        let is_editing_in = is_editing.clone();
+        focus_controller.connect_enter(move |_| {
+            *is_editing_in.borrow_mut() = true;
+        });
+        let is_editing_out = is_editing.clone();
+        focus_controller.connect_leave(move |_| {
+            *is_editing_out.borrow_mut() = false;
+        });
+        entry.add_controller(focus_controller);
+        
         // Callback cuando el usuario presiona Enter en el Entry
         let adj2 = adj.clone();
         let unit_combo2 = unit_combo.clone();
+        let is_editing_enter = is_editing.clone();
         entry.connect_activate(move |e| {
+            *is_editing_enter.borrow_mut() = false;
             let text = e.text().to_string();
             let unit = unit_combo2.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
             if let Ok(val) = text.parse::<f64>() {
@@ -1400,7 +1454,7 @@ pub fn build_ui(app: &Application) {
             }
         });
         
-        // Callback cuando cambia la unidad
+        // Callback cuando cambia la unidad - con validación de límites
         let entry3 = entry.clone();
         let adj3 = adj.clone();
         unit_combo.connect_changed(move |combo| {
@@ -1411,15 +1465,34 @@ pub fn build_ui(app: &Application) {
                 "mhz" => hz / 1_000_000.0,
                 _ => hz,
             };
+            // Validar que el valor en la nueva unidad no exceda los límites
+            let max_val = match unit.as_str() {
+                "khz" => FREQ_MAX_HZ / 1_000.0,
+                "mhz" => FREQ_MAX_HZ / 1_000_000.0,
+                _ => FREQ_MAX_HZ,
+            };
+            let min_val = match unit.as_str() {
+                "khz" => FREQ_MIN_HZ / 1_000.0,
+                "mhz" => FREQ_MIN_HZ / 1_000_000.0,
+                _ => FREQ_MIN_HZ,
+            };
+            let val = val.clamp(min_val, max_val);
             entry3.set_text(&format!("{:.4}", val).trim_end_matches('0').trim_end_matches('.').to_string());
         });
         
-        // Callback cuando cambia el adjustment (desde presets o polling)
+        // Callback cuando cambia el adjustment (desde presets o entrada manual)
         let entry4 = entry.clone();
         let unit_combo4 = unit_combo.clone();
         let drv4 = drv.clone();
+        let is_editing_update = is_editing.clone();
         adj.connect_value_changed(move |a| {
+            // No actualizar el Entry si el usuario está editando
+            if *is_editing_update.borrow() {
+                return;
+            }
+            
             let hz = a.value();
+            eprintln!("[DEBUG CH2] connect_value_changed disparado: {} Hz", hz);
             let unit = unit_combo4.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
             let val = match unit.as_str() {
                 "khz" => hz / 1_000.0,
@@ -1430,6 +1503,7 @@ pub fn build_ui(app: &Application) {
             let drv = drv4.clone();
             std::thread::spawn(move || {
                 let mut d = drv.lock().unwrap();
+                eprintln!("[DEBUG CH2] Enviando set_frequency(2, {}) al generador", hz);
                 let _ = d.set_frequency(2, hz);
             });
         });

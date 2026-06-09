@@ -365,7 +365,9 @@ impl Jds6600 {
             bail!("Canal debe ser 1 o 2");
         }
         let val = (hz * 100.0) as i64;
+        eprintln!("[DEBUG] set_frequency(ch={}, hz={}, val={})", ch, hz, val);
         let resp = self.send_cmd(&format!(":w{}={val},0.\n", 22 + ch))?;
+        eprintln!("[DEBUG] Respuesta: {}", resp);
         let val = Self::parse_response(&resp)?;
         if val != "ok" {
             bail!("Error al setear frecuencia: {}", val);
