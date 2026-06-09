@@ -1,7 +1,7 @@
 use gtk4::prelude::*;
 use gtk4::{
     Align, Application, ApplicationWindow, Box as GtkBox, Button, ComboBoxText,
-    DrawingArea, Entry, Frame, GestureClick, Grid, HeaderBar, Label, Orientation, Overlay,
+    DrawingArea, Frame, GestureClick, Grid, HeaderBar, Label, Orientation, Overlay,
     Revealer, Separator, SpinButton, Switch,
 };
 use glib::source::timeout_add_local;
@@ -680,7 +680,7 @@ pub fn build_ui(app: &Application) {
 
     fn build_channel_panel(
         ch_num: u8,
-    ) -> (Frame, Switch, ComboBoxText, gtk4::Adjustment, gtk4::Adjustment, gtk4::Adjustment, gtk4::Adjustment, Entry, ComboBoxText, DrawingArea, SpinButton) {
+    ) -> (Frame, Switch, ComboBoxText, gtk4::Adjustment, gtk4::Adjustment, gtk4::Adjustment, gtk4::Adjustment, SpinButton, ComboBoxText, DrawingArea, SpinButton) {
         let frame = Frame::new(None);
         frame.add_css_class("channel-frame");
         frame.add_css_class(if ch_num == 1 { "ch1-frame" } else { "ch2-frame" });
@@ -743,8 +743,8 @@ pub fn build_ui(app: &Application) {
         let freq_box = GtkBox::new(Orientation::Horizontal, 4);
         freq_box.set_hexpand(true);
         
-        let freq_entry = Entry::new();
-        freq_entry.set_text("1000");
+        // Usar SpinButton en lugar de Entry para validación numérica automática
+        let freq_entry = SpinButton::new(Some(&freq_adj), 0.01, 2);
         freq_entry.set_width_chars(10);
         freq_entry.add_css_class("freq-entry");
         freq_entry.set_hexpand(true);
@@ -978,7 +978,7 @@ pub fn build_ui(app: &Application) {
             ch1_d.set_value(state.ch1.duty_cycle);
             ch2_d.set_value(state.ch2.duty_cycle);
             
-            // Actualizar SOLO el Entry de frecuencia según la unidad seleccionada
+            // Actualizar SOLO el SpinButton de frecuencia según la unidad
             let ch1_unit = ch1_fu.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
             let ch2_unit = ch2_fu.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
             let ch1_val = match ch1_unit.as_str() {
@@ -991,8 +991,8 @@ pub fn build_ui(app: &Application) {
                 "mhz" => state.ch2.frequency / 1_000_000.0,
                 _ => state.ch2.frequency,
             };
-            ch1_fe.set_text(&format!("{:.4}", ch1_val).trim_end_matches('0').trim_end_matches('.').to_string());
-            ch2_fe.set_text(&format!("{:.4}", ch2_val).trim_end_matches('0').trim_end_matches('.').to_string());
+            ch1_fe.set_value(ch1_val);
+            ch2_fe.set_value(ch2_val);
 
             if state.connected {
                 dot.add_css_class("on");
@@ -1261,73 +1261,36 @@ pub fn build_ui(app: &Application) {
     }
     {
         let drv = driver.clone();
-        let entry = ch1_freq_entry.clone();
+        let spin = ch1_freq_entry.clone();
         let unit_combo = ch1_freq_unit.clone();
         let adj = ch1_freq_adj.clone();
         
-        // Configurar Entry para solo aceptar números
-        entry.set_input_purpose(gtk4::InputPurpose::Number);
-        
-        // Flag para evitar actualizaciones mientras el usuario edita
-        let is_editing = Rc::new(RefCell::new(false));
-        
-        // Controller para detectar foco y posicionar cursor al final
-        let focus_controller = gtk4::EventControllerFocus::new();
-        let is_editing_in = is_editing.clone();
-        let entry_cursor = entry.clone();
-        focus_controller.connect_enter(move |_| {
-            *is_editing_in.borrow_mut() = true;
-            // Posicionar cursor al final del texto
-            entry_cursor.set_position(-1);
-        });
-        let is_editing_out = is_editing.clone();
-        focus_controller.connect_leave(move |_| {
-            *is_editing_out.borrow_mut() = false;
-        });
-        entry.add_controller(focus_controller);
-        
-        // Callback cuando el usuario presiona Enter en el Entry
-        let adj2 = adj.clone();
-        let unit_combo2 = unit_combo.clone();
-        let is_editing_enter = is_editing.clone();
-        let entry_error = entry.clone();
-        entry.connect_activate(move |e| {
-            *is_editing_enter.borrow_mut() = false;
-            let text = e.text().to_string();
-            let unit = unit_combo2.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
-            
-            // Validar que sea un número válido
-            match text.parse::<f64>() {
-                Ok(val) => {
-                    let hz = match unit.as_str() {
-                        "khz" => val * 1_000.0,
-                        "mhz" => val * 1_000_000.0,
-                        _ => val,
-                    };
-                    let hz = hz.clamp(FREQ_MIN_HZ, FREQ_MAX_HZ);
-                    adj2.set_value(hz);
-                    entry_error.remove_css_class("error");
-                }
-                Err(_) => {
-                    // Mostrar error visual si no es un número válido
-                    entry_error.add_css_class("error");
-                    eprintln!("[ERROR] Frecuencia inválida: '{}'. Solo se aceptan números.", text);
-                }
-            }
+        // SpinButton ya valida números automáticamente
+        // Solo necesitamos actualizar cuando cambia el valor
+        let drv_spin = drv.clone();
+        let unit_combo_spin = unit_combo.clone();
+        adj.connect_value_changed(move |a| {
+            let hz = a.value();
+            eprintln!("[DEBUG CH1] Frecuencia cambiada: {} Hz", hz);
+            let drv = drv_spin.clone();
+            std::thread::spawn(move || {
+                let mut d = drv.lock().unwrap();
+                let _ = d.set_frequency(1, hz);
+            });
         });
         
-        // Callback cuando cambia la unidad - con validación de límites
-        let entry3 = entry.clone();
-        let adj3 = adj.clone();
+        // Actualizar display cuando cambia la unidad
+        let spin_unit = spin.clone();
+        let adj_unit = adj.clone();
         unit_combo.connect_changed(move |combo| {
             let unit = combo.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
-            let hz = adj3.value();
+            let hz = adj_unit.value();
             let val = match unit.as_str() {
                 "khz" => hz / 1_000.0,
                 "mhz" => hz / 1_000_000.0,
                 _ => hz,
             };
-            // Validar que el valor en la nueva unidad no exceda los límites
+            // Clamp según unidad
             let max_val = match unit.as_str() {
                 "khz" => FREQ_MAX_HZ / 1_000.0,
                 "mhz" => FREQ_MAX_HZ / 1_000_000.0,
@@ -1339,35 +1302,7 @@ pub fn build_ui(app: &Application) {
                 _ => FREQ_MIN_HZ,
             };
             let val = val.clamp(min_val, max_val);
-            entry3.set_text(&format!("{:.4}", val).trim_end_matches('0').trim_end_matches('.').to_string());
-        });
-        
-        // Callback cuando cambia el adjustment (desde presets o entrada manual)
-        let entry4 = entry.clone();
-        let unit_combo4 = unit_combo.clone();
-        let drv4 = drv.clone();
-        let is_editing_update = is_editing.clone();
-        adj.connect_value_changed(move |a| {
-            // No actualizar el Entry si el usuario está editando
-            if *is_editing_update.borrow() {
-                return;
-            }
-            
-            let hz = a.value();
-            eprintln!("[DEBUG CH1] connect_value_changed disparado: {} Hz", hz);
-            let unit = unit_combo4.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
-            let val = match unit.as_str() {
-                "khz" => hz / 1_000.0,
-                "mhz" => hz / 1_000_000.0,
-                _ => hz,
-            };
-            entry4.set_text(&format!("{:.4}", val).trim_end_matches('0').trim_end_matches('.').to_string());
-            let drv = drv4.clone();
-            std::thread::spawn(move || {
-                let mut d = drv.lock().unwrap();
-                eprintln!("[DEBUG CH1] Enviando set_frequency(1, {}) al generador", hz);
-                let _ = d.set_frequency(1, hz);
-            });
+            spin_unit.set_value(val);
         });
     }
     {
@@ -1439,73 +1374,35 @@ pub fn build_ui(app: &Application) {
     }
     {
         let drv = driver.clone();
-        let entry = ch2_freq_entry.clone();
+        let spin = ch2_freq_entry.clone();
         let unit_combo = ch2_freq_unit.clone();
         let adj = ch2_freq_adj.clone();
         
-        // Configurar Entry para solo aceptar números
-        entry.set_input_purpose(gtk4::InputPurpose::Number);
-        
-        // Flag para evitar actualizaciones mientras el usuario edita
-        let is_editing = Rc::new(RefCell::new(false));
-        
-        // Controller para detectar foco y posicionar cursor al final
-        let focus_controller = gtk4::EventControllerFocus::new();
-        let is_editing_in = is_editing.clone();
-        let entry_cursor = entry.clone();
-        focus_controller.connect_enter(move |_| {
-            *is_editing_in.borrow_mut() = true;
-            // Posicionar cursor al final del texto
-            entry_cursor.set_position(-1);
-        });
-        let is_editing_out = is_editing.clone();
-        focus_controller.connect_leave(move |_| {
-            *is_editing_out.borrow_mut() = false;
-        });
-        entry.add_controller(focus_controller);
-        
-        // Callback cuando el usuario presiona Enter en el Entry
-        let adj2 = adj.clone();
-        let unit_combo2 = unit_combo.clone();
-        let is_editing_enter = is_editing.clone();
-        let entry_error = entry.clone();
-        entry.connect_activate(move |e| {
-            *is_editing_enter.borrow_mut() = false;
-            let text = e.text().to_string();
-            let unit = unit_combo2.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
-            
-            // Validar que sea un número válido
-            match text.parse::<f64>() {
-                Ok(val) => {
-                    let hz = match unit.as_str() {
-                        "khz" => val * 1_000.0,
-                        "mhz" => val * 1_000_000.0,
-                        _ => val,
-                    };
-                    let hz = hz.clamp(FREQ_MIN_HZ, FREQ_MAX_HZ);
-                    adj2.set_value(hz);
-                    entry_error.remove_css_class("error");
-                }
-                Err(_) => {
-                    // Mostrar error visual si no es un número válido
-                    entry_error.add_css_class("error");
-                    eprintln!("[ERROR] Frecuencia inválida: '{}'. Solo se aceptan números.", text);
-                }
-            }
+        // SpinButton ya valida números automáticamente
+        // Solo necesitamos actualizar cuando cambia el valor
+        let drv_spin = drv.clone();
+        adj.connect_value_changed(move |a| {
+            let hz = a.value();
+            eprintln!("[DEBUG CH2] Frecuencia cambiada: {} Hz", hz);
+            let drv = drv_spin.clone();
+            std::thread::spawn(move || {
+                let mut d = drv.lock().unwrap();
+                let _ = d.set_frequency(2, hz);
+            });
         });
         
-        // Callback cuando cambia la unidad - con validación de límites
-        let entry3 = entry.clone();
-        let adj3 = adj.clone();
+        // Actualizar display cuando cambia la unidad
+        let spin_unit = spin.clone();
+        let adj_unit = adj.clone();
         unit_combo.connect_changed(move |combo| {
             let unit = combo.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
-            let hz = adj3.value();
+            let hz = adj_unit.value();
             let val = match unit.as_str() {
                 "khz" => hz / 1_000.0,
                 "mhz" => hz / 1_000_000.0,
                 _ => hz,
             };
-            // Validar que el valor en la nueva unidad no exceda los límites
+            // Clamp según unidad
             let max_val = match unit.as_str() {
                 "khz" => FREQ_MAX_HZ / 1_000.0,
                 "mhz" => FREQ_MAX_HZ / 1_000_000.0,
@@ -1517,35 +1414,7 @@ pub fn build_ui(app: &Application) {
                 _ => FREQ_MIN_HZ,
             };
             let val = val.clamp(min_val, max_val);
-            entry3.set_text(&format!("{:.4}", val).trim_end_matches('0').trim_end_matches('.').to_string());
-        });
-        
-        // Callback cuando cambia el adjustment (desde presets o entrada manual)
-        let entry4 = entry.clone();
-        let unit_combo4 = unit_combo.clone();
-        let drv4 = drv.clone();
-        let is_editing_update = is_editing.clone();
-        adj.connect_value_changed(move |a| {
-            // No actualizar el Entry si el usuario está editando
-            if *is_editing_update.borrow() {
-                return;
-            }
-            
-            let hz = a.value();
-            eprintln!("[DEBUG CH2] connect_value_changed disparado: {} Hz", hz);
-            let unit = unit_combo4.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
-            let val = match unit.as_str() {
-                "khz" => hz / 1_000.0,
-                "mhz" => hz / 1_000_000.0,
-                _ => hz,
-            };
-            entry4.set_text(&format!("{:.4}", val).trim_end_matches('0').trim_end_matches('.').to_string());
-            let drv = drv4.clone();
-            std::thread::spawn(move || {
-                let mut d = drv.lock().unwrap();
-                eprintln!("[DEBUG CH2] Enviando set_frequency(2, {}) al generador", hz);
-                let _ = d.set_frequency(2, hz);
-            });
+            spin_unit.set_value(val);
         });
     }
     {
