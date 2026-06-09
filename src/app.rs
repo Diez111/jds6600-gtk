@@ -938,8 +938,7 @@ pub fn build_ui(app: &Application) {
         let ch2_t = ch2_toggle.clone();
         let ch1_w = ch1_wave.clone();
         let ch2_w = ch2_wave.clone();
-        let ch1_f = ch1_freq_adj.clone();
-        let ch2_f = ch2_freq_adj.clone();
+        // No necesitamos ch1_f/ch2_f porque el polling solo actualiza el Entry, no el Adjustment
         let ch1_a = ch1_amp_adj.clone();
         let ch2_a = ch2_amp_adj.clone();
         let ch1_o = ch1_off_adj.clone();
@@ -961,8 +960,9 @@ pub fn build_ui(app: &Application) {
             ch2_t.set_active(state.ch2.enabled);
             ch1_w.set_active_id(Some(&state.ch1.waveform));
             ch2_w.set_active_id(Some(&state.ch2.waveform));
-            ch1_f.set_value(state.ch1.frequency);
-            ch2_f.set_value(state.ch2.frequency);
+            // NO actualizar Adjustments de frecuencia desde polling para evitar loops
+            // ch1_f.set_value(state.ch1.frequency);
+            // ch2_f.set_value(state.ch2.frequency);
             ch1_a.set_value(state.ch1.amplitude);
             ch2_a.set_value(state.ch2.amplitude);
             ch1_o.set_value(state.ch1.offset);
@@ -970,7 +970,7 @@ pub fn build_ui(app: &Application) {
             ch1_d.set_value(state.ch1.duty_cycle);
             ch2_d.set_value(state.ch2.duty_cycle);
             
-            // Actualizar entry de frecuencia según la unidad seleccionada
+            // Actualizar SOLO el Entry de frecuencia según la unidad seleccionada
             let ch1_unit = ch1_fu.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
             let ch2_unit = ch2_fu.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
             let ch1_val = match ch1_unit.as_str() {
@@ -1258,9 +1258,8 @@ pub fn build_ui(app: &Application) {
         let adj = ch1_freq_adj.clone();
         
         // Callback cuando el usuario presiona Enter en el Entry
-        let drv2 = drv.clone();
-        let unit_combo2 = unit_combo.clone();
         let adj2 = adj.clone();
+        let unit_combo2 = unit_combo.clone();
         entry.connect_activate(move |e| {
             let text = e.text().to_string();
             let unit = unit_combo2.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
@@ -1272,11 +1271,7 @@ pub fn build_ui(app: &Application) {
                 };
                 let hz = hz.clamp(FREQ_MIN_HZ, FREQ_MAX_HZ);
                 adj2.set_value(hz);
-                let drv = drv2.clone();
-                std::thread::spawn(move || {
-                    let mut d = drv.lock().unwrap();
-                    let _ = d.set_frequency(1, hz);
-                });
+                // connect_value_changed se encargará de enviar al generador
             }
         });
         
@@ -1388,9 +1383,8 @@ pub fn build_ui(app: &Application) {
         let adj = ch2_freq_adj.clone();
         
         // Callback cuando el usuario presiona Enter en el Entry
-        let drv2 = drv.clone();
-        let unit_combo2 = unit_combo.clone();
         let adj2 = adj.clone();
+        let unit_combo2 = unit_combo.clone();
         entry.connect_activate(move |e| {
             let text = e.text().to_string();
             let unit = unit_combo2.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
@@ -1402,11 +1396,7 @@ pub fn build_ui(app: &Application) {
                 };
                 let hz = hz.clamp(FREQ_MIN_HZ, FREQ_MAX_HZ);
                 adj2.set_value(hz);
-                let drv = drv2.clone();
-                std::thread::spawn(move || {
-                    let mut d = drv.lock().unwrap();
-                    let _ = d.set_frequency(2, hz);
-                });
+                // connect_value_changed se encargará de enviar al generador
             }
         });
         
