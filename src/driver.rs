@@ -209,7 +209,7 @@ impl Jds6600 {
             .data_bits(serialport::DataBits::Eight)
             .stop_bits(serialport::StopBits::One)
             .parity(serialport::Parity::None)
-            .timeout(Duration::from_secs(1))
+            .timeout(Duration::from_millis(200))
             .open()?;
         // Algunos adaptadores resetean el MCU al abrir (DTR/RTS); darle tiempo de arrancar
         std::thread::sleep(Duration::from_millis(400));
