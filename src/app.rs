@@ -4,6 +4,7 @@ use gtk4::{
     DrawingArea, Frame, GestureClick, Grid, HeaderBar, Label, Orientation, Overlay,
     Revealer, Separator, SpinButton, Switch,
 };
+use gtk4::gdk;
 use glib::source::timeout_add_local;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -635,6 +636,10 @@ pub fn build_ui(app: &Application) {
 
     let driver = Arc::new(Mutex::new(Jds6600::new("/dev/ttyUSB0")));
     let connected = Rc::new(RefCell::new(false));
+    
+    // Flags globales para bloquear polling mientras el usuario edita frecuencia
+    let ch1_freq_editing = Rc::new(RefCell::new(false));
+    let ch2_freq_editing = Rc::new(RefCell::new(false));
 
     let toast_revealer = Revealer::new();
     toast_revealer.set_transition_type(gtk4::RevealerTransitionType::SlideUp);
@@ -957,6 +962,8 @@ pub fn build_ui(app: &Application) {
         let ch2_fe = ch2_freq_entry.clone();
         let ch1_fu = ch1_freq_unit.clone();
         let ch2_fu = ch2_freq_unit.clone();
+        let ch1_editing = ch1_freq_editing.clone();
+        let ch2_editing = ch2_freq_editing.clone();
         let dot = status_dot.clone();
         let txt = status_text.clone();
         let btn = btn_connect.clone();
@@ -979,20 +986,25 @@ pub fn build_ui(app: &Application) {
             ch2_d.set_value(state.ch2.duty_cycle);
             
             // Actualizar SOLO el SpinButton de frecuencia según la unidad
-            let ch1_unit = ch1_fu.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
-            let ch2_unit = ch2_fu.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
-            let ch1_val = match ch1_unit.as_str() {
-                "khz" => state.ch1.frequency / 1_000.0,
-                "mhz" => state.ch1.frequency / 1_000_000.0,
-                _ => state.ch1.frequency,
-            };
-            let ch2_val = match ch2_unit.as_str() {
-                "khz" => state.ch2.frequency / 1_000.0,
-                "mhz" => state.ch2.frequency / 1_000_000.0,
-                _ => state.ch2.frequency,
-            };
-            ch1_fe.set_value(ch1_val);
-            ch2_fe.set_value(ch2_val);
+            // Pero NO si el usuario está editando
+            if !*ch1_editing.borrow() {
+                let ch1_unit = ch1_fu.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
+                let ch1_val = match ch1_unit.as_str() {
+                    "khz" => state.ch1.frequency / 1_000.0,
+                    "mhz" => state.ch1.frequency / 1_000_000.0,
+                    _ => state.ch1.frequency,
+                };
+                ch1_fe.set_value(ch1_val);
+            }
+            if !*ch2_editing.borrow() {
+                let ch2_unit = ch2_fu.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
+                let ch2_val = match ch2_unit.as_str() {
+                    "khz" => state.ch2.frequency / 1_000.0,
+                    "mhz" => state.ch2.frequency / 1_000_000.0,
+                    _ => state.ch2.frequency,
+                };
+                ch2_fe.set_value(ch2_val);
+            }
 
             if state.connected {
                 dot.add_css_class("on");
@@ -1264,14 +1276,57 @@ pub fn build_ui(app: &Application) {
         let spin = ch1_freq_entry.clone();
         let unit_combo = ch1_freq_unit.clone();
         let adj = ch1_freq_adj.clone();
+        let is_editing = ch1_freq_editing.clone();
         
-        // SpinButton ya valida números automáticamente
-        // Solo necesitamos actualizar cuando cambia el valor
+        // Detectar cuando el usuario empieza/termina de editar
+        let focus_controller = gtk4::EventControllerFocus::new();
+        let is_editing_in = is_editing.clone();
+        focus_controller.connect_enter(move |_| {
+            *is_editing_in.borrow_mut() = true;
+        });
+        let is_editing_out = is_editing.clone();
+        let drv_out = drv.clone();
+        let adj_out = adj.clone();
+        focus_controller.connect_leave(move |_| {
+            *is_editing_out.borrow_mut() = false;
+            // Aplicar cambio al perder el foco
+            let hz = adj_out.value();
+            let drv = drv_out.clone();
+            std::thread::spawn(move || {
+                let mut d = drv.lock().unwrap();
+                let _ = d.set_frequency(1, hz);
+            });
+        });
+        spin.add_controller(focus_controller);
+        
+        // Aplicar cambio al presionar Enter (usando evento de teclado)
+        let key_controller = gtk4::EventControllerKey::new();
+        let drv_key = drv.clone();
+        let adj_key = adj.clone();
+        key_controller.connect_key_pressed(move |_, key, _, _| {
+            if key == gdk::Key::Return || key == gdk::Key::KP_Enter {
+                let hz = adj_key.value();
+                let drv = drv_key.clone();
+                std::thread::spawn(move || {
+                    let mut d = drv.lock().unwrap();
+                    let _ = d.set_frequency(1, hz);
+                });
+                return glib::Propagation::Stop;
+            }
+            glib::Propagation::Proceed
+        });
+        spin.add_controller(key_controller);
+        
+        // Solo enviar al generador cuando el usuario usa los botones +/- del SpinButton
+        // (no cuando el polling actualiza el valor)
         let drv_spin = drv.clone();
-        let unit_combo_spin = unit_combo.clone();
+        let is_editing_spin = is_editing.clone();
         adj.connect_value_changed(move |a| {
+            // No enviar si el usuario está editando manualmente
+            if *is_editing_spin.borrow() {
+                return;
+            }
             let hz = a.value();
-            eprintln!("[DEBUG CH1] Frecuencia cambiada: {} Hz", hz);
             let drv = drv_spin.clone();
             std::thread::spawn(move || {
                 let mut d = drv.lock().unwrap();
@@ -1377,13 +1432,57 @@ pub fn build_ui(app: &Application) {
         let spin = ch2_freq_entry.clone();
         let unit_combo = ch2_freq_unit.clone();
         let adj = ch2_freq_adj.clone();
+        let is_editing = ch2_freq_editing.clone();
         
-        // SpinButton ya valida números automáticamente
-        // Solo necesitamos actualizar cuando cambia el valor
+        // Flag para bloquear actualizaciones mientras el usuario edita
+        let focus_controller = gtk4::EventControllerFocus::new();
+        let is_editing_in = is_editing.clone();
+        focus_controller.connect_enter(move |_| {
+            *is_editing_in.borrow_mut() = true;
+        });
+        let is_editing_out = is_editing.clone();
+        let drv_out = drv.clone();
+        let adj_out = adj.clone();
+        focus_controller.connect_leave(move |_| {
+            *is_editing_out.borrow_mut() = false;
+            // Aplicar cambio al perder el foco
+            let hz = adj_out.value();
+            let drv = drv_out.clone();
+            std::thread::spawn(move || {
+                let mut d = drv.lock().unwrap();
+                let _ = d.set_frequency(2, hz);
+            });
+        });
+        spin.add_controller(focus_controller);
+        
+        // Aplicar cambio al presionar Enter (usando evento de teclado)
+        let key_controller = gtk4::EventControllerKey::new();
+        let drv_key = drv.clone();
+        let adj_key = adj.clone();
+        key_controller.connect_key_pressed(move |_, key, _, _| {
+            if key == gdk::Key::Return || key == gdk::Key::KP_Enter {
+                let hz = adj_key.value();
+                let drv = drv_key.clone();
+                std::thread::spawn(move || {
+                    let mut d = drv.lock().unwrap();
+                    let _ = d.set_frequency(2, hz);
+                });
+                return glib::Propagation::Stop;
+            }
+            glib::Propagation::Proceed
+        });
+        spin.add_controller(key_controller);
+        
+        // Solo enviar al generador cuando el usuario usa los botones +/- del SpinButton
+        // (no cuando el polling actualiza el valor)
         let drv_spin = drv.clone();
+        let is_editing_spin = is_editing.clone();
         adj.connect_value_changed(move |a| {
+            // No enviar si el usuario está editando manualmente
+            if *is_editing_spin.borrow() {
+                return;
+            }
             let hz = a.value();
-            eprintln!("[DEBUG CH2] Frecuencia cambiada: {} Hz", hz);
             let drv = drv_spin.clone();
             std::thread::spawn(move || {
                 let mut d = drv.lock().unwrap();
