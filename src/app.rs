@@ -1317,15 +1317,9 @@ pub fn build_ui(app: &Application) {
         });
         spin.add_controller(key_controller);
         
-        // Solo enviar al generador cuando el usuario usa los botones +/- del SpinButton
-        // (no cuando el polling actualiza el valor)
+        // Enviar al generador cuando el valor cambie (por botones +/- o entrada directa)
         let drv_spin = drv.clone();
-        let is_editing_spin = is_editing.clone();
         adj.connect_value_changed(move |a| {
-            // No enviar si el usuario está editando manualmente
-            if *is_editing_spin.borrow() {
-                return;
-            }
             let hz = a.value();
             let drv = drv_spin.clone();
             std::thread::spawn(move || {
@@ -1473,15 +1467,9 @@ pub fn build_ui(app: &Application) {
         });
         spin.add_controller(key_controller);
         
-        // Solo enviar al generador cuando el usuario usa los botones +/- del SpinButton
-        // (no cuando el polling actualiza el valor)
+        // Enviar al generador cuando el valor cambie (por botones +/- o entrada directa)
         let drv_spin = drv.clone();
-        let is_editing_spin = is_editing.clone();
         adj.connect_value_changed(move |a| {
-            // No enviar si el usuario está editando manualmente
-            if *is_editing_spin.borrow() {
-                return;
-            }
             let hz = a.value();
             let drv = drv_spin.clone();
             std::thread::spawn(move || {
