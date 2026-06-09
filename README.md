@@ -4,6 +4,7 @@ Aplicación de escritorio nativa en **Rust + GTK4** para controlar generadores d
 
 ![GTK4](https://img.shields.io/badge/GTK4-0.8-blue)
 ![Rust](https://img.shields.io/badge/Rust-2021-orange)
+![Version](https://img.shields.io/badge/version-0.2.0-green)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
@@ -11,6 +12,7 @@ Aplicación de escritorio nativa en **Rust + GTK4** para controlar generadores d
 ## Índice
 
 - [Características](#características)
+- [Limitaciones — Modulación entre canales](#limitaciones--modulación-entre-canales)
 - [Requisitos del sistema](#requisitos-del-sistema)
 - [Compilación](#compilación)
 - [Uso](#uso)
@@ -19,6 +21,7 @@ Aplicación de escritorio nativa en **Rust + GTK4** para controlar generadores d
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Dependencias](#dependencias)
 - [Limitaciones de hardware](#limitaciones-de-hardware)
+- [Changelog](#changelog)
 - [Licencia](#licencia)
 
 ---
@@ -51,6 +54,29 @@ Aplicación de escritorio nativa en **Rust + GTK4** para controlar generadores d
 - Lectura directa del puerto sin `try_clone()` (compatible con CH340/FTDI/CP210x)
 - Timeout configurable, reintentos automáticos en auto-detección
 - Manejo robusto de errores con `anyhow`
+
+---
+
+## Limitaciones — Modulación entre canales
+
+**El JDS6600 no soporta modulación directa entre canales a través del protocolo serial.**
+
+El JDS6600 tiene:
+- 2 canales **independientes** (cada uno con su propia configuración)
+- Modulación interna (AM/FM/PM) usando señales internas del generador
+- Entrada de modulación externa (conector BNC trasero)
+
+**No hay comandos seriales** para que el Canal 1 module al Canal 2 directamente.
+
+### Alternativas para lograr modulación:
+
+1. **Modulación externa física**: Conectar la salida del Canal 1 al conector de entrada de modulación externa (si tu JDS6600 lo tiene). Esto es hardware, no software.
+
+2. **Software externo**: Usar un programa como GNU Radio o similar para generar señales moduladas y enviarlas por USB (pero esto requiere hardware adicional como un SDR).
+
+3. **Sincronización manual**: Configurar ambos canales con parámetros relacionados (ej: Canal 1 a 1kHz, Canal 2 a 2kHz) para crear efectos de interferencia, pero no es modulación real.
+
+El protocolo serial del JDS6600 solo expone control básico: forma de onda, frecuencia, amplitud, offset y duty cycle para cada canal. Las funciones avanzadas de modulación solo están disponibles desde el panel frontal del equipo o mediante la entrada externa.
 
 ---
 
@@ -295,6 +321,50 @@ El JDS6600 tiene límites físicos que la aplicación respeta:
 ### La app no arranca
 - Verificar que GTK4 esté instalado: `pkg-config --modversion gtk4`
 - En Wayland, puede necesitar `GDK_BACKEND=x11` para compatibilidad
+
+---
+
+## Changelog
+
+### v0.2.0 — Rediseño profesional y correcciones
+
+**UI/UX profesional:**
+- Rediseño completo con `GtkHeaderBar` nativo (decoraciones del sistema)
+- Modo claro/oscuro con toggle en tiempo real (sin reiniciar)
+- Layout con `GtkGrid` alineado — nada desborda
+- `GtkSwitch` nativo para encendido/apagado de canales
+- `GtkOverlay` para toast flotantes
+- Preview de osciloscopio más grande (400x120)
+- Presets de frecuencia rápidos: 50Hz, 100Hz, 1kHz, 10kHz, 100kHz, 1MHz, 10MHz
+- Duty cycle se deshabilita automáticamente para formas de onda que no lo usan
+- Límites de hardware exactos en todos los ajustes
+
+**Auto-detección mejorada:**
+- Filtrado de puertos fantasma `ttyS*` (nativos del chipset)
+- Solo busca puertos USB reales (`/dev/ttyUSB*`, `/dev/ttyACM*`)
+- Verificación de puertos abribles antes de incluirlos en la lista
+- Priorización de puertos USB/ACM sobre otros
+
+**Correcciones críticas:**
+- Fix de lectura serial: `BufReader::new(&mut **conn)` en vez de `try_clone()` (fallaba en CH340/FTDI)
+- Fix de preview: `queue_draw()` en callbacks de forma de onda y duty cycle
+- Timeout normalizado a 1 segundo (como el proyecto Python de referencia)
+- Delay post-conexión de 400ms para arranque del MCU
+
+**Documentación:**
+- README completo en español con documentación técnica
+- Sección sobre limitaciones de modulación entre canales
+- Protocolo serial documentado con ejemplos
+- Solución de problemas comunes
+
+### v0.1.0 — Versión inicial
+
+- Control básico de JDS6600 via serial USB
+- 2 canales independientes con 17 formas de onda
+- 8 presets con persistencia JSON
+- Sync 1→2, Apagar todo
+- Polling en tiempo real (500ms)
+- Auto-detección básica de puertos
 
 ---
 
