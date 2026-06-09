@@ -1,0 +1,15 @@
+[package]
+name = "jds6600-gtk"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gtk4 = { version = "0.8", features = ["v4_6"] }
+glib = "0.19"
+cairo-rs = "0.19"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serialport = "4.2"
+anyhow = "1.0"
+rand = "0.8"
+glob = "0.3"
