@@ -1,7 +1,7 @@
 use gtk4::prelude::*;
 use gtk4::{
     Align, Application, ApplicationWindow, Box as GtkBox, Button, ComboBoxText,
-    DrawingArea, Frame, GestureClick, Grid, HeaderBar, Label, Orientation, Overlay,
+    DrawingArea, Entry, Frame, GestureClick, Grid, HeaderBar, Label, Orientation, Overlay,
     Revealer, Separator, SpinButton, Switch,
 };
 use glib::source::timeout_add_local;
@@ -44,18 +44,6 @@ fn waveform_display(name: &str) -> String {
         _ => name,
     }
     .to_string()
-}
-
-fn format_freq(hz: f64) -> String {
-    if hz >= 1_000_000.0 {
-        format!("{:.4} MHz", hz / 1_000_000.0)
-    } else if hz >= 1000.0 {
-        format!("{:.3} kHz", hz / 1000.0)
-    } else if hz >= 1.0 {
-        format!("{:.2} Hz", hz)
-    } else {
-        format!("{:.3} Hz", hz)
-    }
 }
 
 fn waveform_has_duty(name: &str) -> bool {
@@ -183,6 +171,36 @@ fn dark_css() -> &'static str {
         color: #58a6ff;
         background-color: #0d1b2a;
     }
+
+    .freq-entry {
+        background-color: #0d1117;
+        color: #58a6ff;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-size: 14px;
+        font-weight: 600;
+        min-height: 30px;
+    }
+    .freq-entry:focus {
+        border-color: #58a6ff;
+        box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+    }
+
+    .freq-unit-combo {
+        background-color: #0d1117;
+        color: #7d8590;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-family: monospace;
+        font-size: 12px;
+        font-weight: 600;
+        min-width: 60px;
+        min-height: 30px;
+    }
+    .freq-unit-combo:hover { border-color: #58a6ff; }
 
     .param-spin {
         background-color: #0d1117;
@@ -411,6 +429,36 @@ fn light_css() -> &'static str {
         background-color: #ddf4ff;
     }
 
+    .freq-entry {
+        background-color: #ffffff;
+        color: #0969da;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-size: 14px;
+        font-weight: 600;
+        min-height: 30px;
+    }
+    .freq-entry:focus {
+        border-color: #0969da;
+        box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.2);
+    }
+
+    .freq-unit-combo {
+        background-color: #ffffff;
+        color: #656d76;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-family: monospace;
+        font-size: 12px;
+        font-weight: 600;
+        min-width: 60px;
+        min-height: 30px;
+    }
+    .freq-unit-combo:hover { border-color: #0969da; }
+
     .param-spin {
         background-color: #ffffff;
         color: #1f2328;
@@ -624,7 +672,7 @@ pub fn build_ui(app: &Application) {
 
     fn build_channel_panel(
         ch_num: u8,
-    ) -> (Frame, Switch, ComboBoxText, gtk4::Adjustment, gtk4::Adjustment, gtk4::Adjustment, gtk4::Adjustment, Label, DrawingArea, SpinButton) {
+    ) -> (Frame, Switch, ComboBoxText, gtk4::Adjustment, gtk4::Adjustment, gtk4::Adjustment, gtk4::Adjustment, Entry, ComboBoxText, DrawingArea, SpinButton) {
         let frame = Frame::new(None);
         frame.add_css_class("channel-frame");
         frame.add_css_class(if ch_num == 1 { "ch1-frame" } else { "ch2-frame" });
@@ -683,11 +731,26 @@ pub fn build_ui(app: &Application) {
         grid.attach(&freq_label, 0, 1, 1, 1);
 
         let freq_adj = gtk4::Adjustment::new(1000.0, FREQ_MIN_HZ, FREQ_MAX_HZ, 1.0, 1000.0, 0.0);
-        let freq_display = Label::new(Some(&format_freq(1000.0)));
-        freq_display.add_css_class("freq-display");
-        freq_display.set_xalign(0.5);
-        freq_display.set_hexpand(true);
-        grid.attach(&freq_display, 1, 1, 2, 1);
+        
+        let freq_box = GtkBox::new(Orientation::Horizontal, 4);
+        freq_box.set_hexpand(true);
+        
+        let freq_entry = Entry::new();
+        freq_entry.set_text("1000");
+        freq_entry.set_width_chars(10);
+        freq_entry.add_css_class("freq-entry");
+        freq_entry.set_hexpand(true);
+        freq_box.append(&freq_entry);
+        
+        let freq_unit_combo = ComboBoxText::new();
+        freq_unit_combo.append(Some("hz"), "Hz");
+        freq_unit_combo.append(Some("khz"), "kHz");
+        freq_unit_combo.append(Some("mhz"), "MHz");
+        freq_unit_combo.set_active_id(Some("hz"));
+        freq_unit_combo.add_css_class("freq-unit-combo");
+        freq_box.append(&freq_unit_combo);
+        
+        grid.attach(&freq_box, 1, 1, 2, 1);
 
         let presets_box = GtkBox::new(Orientation::Horizontal, 3);
         presets_box.set_halign(Align::Center);
@@ -759,14 +822,14 @@ pub fn build_ui(app: &Application) {
         preview.add_css_class("scope-preview");
         grid.attach(&preview, 0, 6, 3, 1);
 
-        (frame, toggle, wave, freq_adj, amp_adj, off_adj, duty_adj, freq_display, preview, duty_spin)
+        (frame, toggle, wave, freq_adj, amp_adj, off_adj, duty_adj, freq_entry, freq_unit_combo, preview, duty_spin)
     }
 
-    let (ch1_frame, ch1_toggle, ch1_wave, ch1_freq_adj, ch1_amp_adj, ch1_off_adj, ch1_duty_adj, ch1_freq_lbl, ch1_preview, ch1_duty_spin) =
+    let (ch1_frame, ch1_toggle, ch1_wave, ch1_freq_adj, ch1_amp_adj, ch1_off_adj, ch1_duty_adj, ch1_freq_entry, ch1_freq_unit, ch1_preview, ch1_duty_spin) =
         build_channel_panel(1);
     channels_box.append(&ch1_frame);
 
-    let (ch2_frame, ch2_toggle, ch2_wave, ch2_freq_adj, ch2_amp_adj, ch2_off_adj, ch2_duty_adj, ch2_freq_lbl, ch2_preview, ch2_duty_spin) =
+    let (ch2_frame, ch2_toggle, ch2_wave, ch2_freq_adj, ch2_amp_adj, ch2_off_adj, ch2_duty_adj, ch2_freq_entry, ch2_freq_unit, ch2_preview, ch2_duty_spin) =
         build_channel_panel(2);
     channels_box.append(&ch2_frame);
 
@@ -883,8 +946,10 @@ pub fn build_ui(app: &Application) {
         let ch2_o = ch2_off_adj.clone();
         let ch1_d = ch1_duty_adj.clone();
         let ch2_d = ch2_duty_adj.clone();
-        let ch1_fl = ch1_freq_lbl.clone();
-        let ch2_fl = ch2_freq_lbl.clone();
+        let ch1_fe = ch1_freq_entry.clone();
+        let ch2_fe = ch2_freq_entry.clone();
+        let ch1_fu = ch1_freq_unit.clone();
+        let ch2_fu = ch2_freq_unit.clone();
         let dot = status_dot.clone();
         let txt = status_text.clone();
         let btn = btn_connect.clone();
@@ -904,8 +969,22 @@ pub fn build_ui(app: &Application) {
             ch2_o.set_value(state.ch2.offset);
             ch1_d.set_value(state.ch1.duty_cycle);
             ch2_d.set_value(state.ch2.duty_cycle);
-            ch1_fl.set_text(&format_freq(state.ch1.frequency));
-            ch2_fl.set_text(&format_freq(state.ch2.frequency));
+            
+            // Actualizar entry de frecuencia según la unidad seleccionada
+            let ch1_unit = ch1_fu.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
+            let ch2_unit = ch2_fu.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
+            let ch1_val = match ch1_unit.as_str() {
+                "khz" => state.ch1.frequency / 1_000.0,
+                "mhz" => state.ch1.frequency / 1_000_000.0,
+                _ => state.ch1.frequency,
+            };
+            let ch2_val = match ch2_unit.as_str() {
+                "khz" => state.ch2.frequency / 1_000.0,
+                "mhz" => state.ch2.frequency / 1_000_000.0,
+                _ => state.ch2.frequency,
+            };
+            ch1_fe.set_text(&format!("{:.4}", ch1_val).trim_end_matches('0').trim_end_matches('.').to_string());
+            ch2_fe.set_text(&format!("{:.4}", ch2_val).trim_end_matches('0').trim_end_matches('.').to_string());
 
             if state.connected {
                 dot.add_css_class("on");
@@ -1174,11 +1253,61 @@ pub fn build_ui(app: &Application) {
     }
     {
         let drv = driver.clone();
-        let lbl = ch1_freq_lbl.clone();
-        ch1_freq_adj.connect_value_changed(move |adj| {
-            let hz = adj.value();
-            lbl.set_text(&format_freq(hz));
-            let drv = drv.clone();
+        let entry = ch1_freq_entry.clone();
+        let unit_combo = ch1_freq_unit.clone();
+        let adj = ch1_freq_adj.clone();
+        
+        // Callback cuando el usuario presiona Enter en el Entry
+        let drv2 = drv.clone();
+        let unit_combo2 = unit_combo.clone();
+        let adj2 = adj.clone();
+        entry.connect_activate(move |e| {
+            let text = e.text().to_string();
+            let unit = unit_combo2.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
+            if let Ok(val) = text.parse::<f64>() {
+                let hz = match unit.as_str() {
+                    "khz" => val * 1_000.0,
+                    "mhz" => val * 1_000_000.0,
+                    _ => val,
+                };
+                let hz = hz.clamp(FREQ_MIN_HZ, FREQ_MAX_HZ);
+                adj2.set_value(hz);
+                let drv = drv2.clone();
+                std::thread::spawn(move || {
+                    let mut d = drv.lock().unwrap();
+                    let _ = d.set_frequency(1, hz);
+                });
+            }
+        });
+        
+        // Callback cuando cambia la unidad
+        let entry3 = entry.clone();
+        let adj3 = adj.clone();
+        unit_combo.connect_changed(move |combo| {
+            let unit = combo.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
+            let hz = adj3.value();
+            let val = match unit.as_str() {
+                "khz" => hz / 1_000.0,
+                "mhz" => hz / 1_000_000.0,
+                _ => hz,
+            };
+            entry3.set_text(&format!("{:.4}", val).trim_end_matches('0').trim_end_matches('.').to_string());
+        });
+        
+        // Callback cuando cambia el adjustment (desde presets o polling)
+        let entry4 = entry.clone();
+        let unit_combo4 = unit_combo.clone();
+        let drv4 = drv.clone();
+        adj.connect_value_changed(move |a| {
+            let hz = a.value();
+            let unit = unit_combo4.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
+            let val = match unit.as_str() {
+                "khz" => hz / 1_000.0,
+                "mhz" => hz / 1_000_000.0,
+                _ => hz,
+            };
+            entry4.set_text(&format!("{:.4}", val).trim_end_matches('0').trim_end_matches('.').to_string());
+            let drv = drv4.clone();
             std::thread::spawn(move || {
                 let mut d = drv.lock().unwrap();
                 let _ = d.set_frequency(1, hz);
@@ -1254,11 +1383,61 @@ pub fn build_ui(app: &Application) {
     }
     {
         let drv = driver.clone();
-        let lbl = ch2_freq_lbl.clone();
-        ch2_freq_adj.connect_value_changed(move |adj| {
-            let hz = adj.value();
-            lbl.set_text(&format_freq(hz));
-            let drv = drv.clone();
+        let entry = ch2_freq_entry.clone();
+        let unit_combo = ch2_freq_unit.clone();
+        let adj = ch2_freq_adj.clone();
+        
+        // Callback cuando el usuario presiona Enter en el Entry
+        let drv2 = drv.clone();
+        let unit_combo2 = unit_combo.clone();
+        let adj2 = adj.clone();
+        entry.connect_activate(move |e| {
+            let text = e.text().to_string();
+            let unit = unit_combo2.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
+            if let Ok(val) = text.parse::<f64>() {
+                let hz = match unit.as_str() {
+                    "khz" => val * 1_000.0,
+                    "mhz" => val * 1_000_000.0,
+                    _ => val,
+                };
+                let hz = hz.clamp(FREQ_MIN_HZ, FREQ_MAX_HZ);
+                adj2.set_value(hz);
+                let drv = drv2.clone();
+                std::thread::spawn(move || {
+                    let mut d = drv.lock().unwrap();
+                    let _ = d.set_frequency(2, hz);
+                });
+            }
+        });
+        
+        // Callback cuando cambia la unidad
+        let entry3 = entry.clone();
+        let adj3 = adj.clone();
+        unit_combo.connect_changed(move |combo| {
+            let unit = combo.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
+            let hz = adj3.value();
+            let val = match unit.as_str() {
+                "khz" => hz / 1_000.0,
+                "mhz" => hz / 1_000_000.0,
+                _ => hz,
+            };
+            entry3.set_text(&format!("{:.4}", val).trim_end_matches('0').trim_end_matches('.').to_string());
+        });
+        
+        // Callback cuando cambia el adjustment (desde presets o polling)
+        let entry4 = entry.clone();
+        let unit_combo4 = unit_combo.clone();
+        let drv4 = drv.clone();
+        adj.connect_value_changed(move |a| {
+            let hz = a.value();
+            let unit = unit_combo4.active_id().map(|s| s.to_string()).unwrap_or_else(|| "hz".to_string());
+            let val = match unit.as_str() {
+                "khz" => hz / 1_000.0,
+                "mhz" => hz / 1_000_000.0,
+                _ => hz,
+            };
+            entry4.set_text(&format!("{:.4}", val).trim_end_matches('0').trim_end_matches('.').to_string());
+            let drv = drv4.clone();
             std::thread::spawn(move || {
                 let mut d = drv.lock().unwrap();
                 let _ = d.set_frequency(2, hz);
