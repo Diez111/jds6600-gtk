@@ -1260,11 +1260,14 @@ pub fn build_ui(app: &Application) {
         // Flag para evitar actualizaciones mientras el usuario edita
         let is_editing = Rc::new(RefCell::new(false));
         
-        // Controller para detectar foco
+        // Controller para detectar foco y seleccionar todo el texto
         let focus_controller = gtk4::EventControllerFocus::new();
         let is_editing_in = is_editing.clone();
+        let entry_sel = entry.clone();
         focus_controller.connect_enter(move |_| {
             *is_editing_in.borrow_mut() = true;
+            // Seleccionar todo el texto para facilitar edición
+            entry_sel.select_region(0, -1);
         });
         let is_editing_out = is_editing.clone();
         focus_controller.connect_leave(move |_| {
@@ -1422,11 +1425,14 @@ pub fn build_ui(app: &Application) {
         // Flag para evitar actualizaciones mientras el usuario edita
         let is_editing = Rc::new(RefCell::new(false));
         
-        // Controller para detectar foco
+        // Controller para detectar foco y seleccionar todo el texto
         let focus_controller = gtk4::EventControllerFocus::new();
         let is_editing_in = is_editing.clone();
+        let entry_sel = entry.clone();
         focus_controller.connect_enter(move |_| {
             *is_editing_in.borrow_mut() = true;
+            // Seleccionar todo el texto para facilitar edición
+            entry_sel.select_region(0, -1);
         });
         let is_editing_out = is_editing.clone();
         focus_controller.connect_leave(move |_| {
