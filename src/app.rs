@@ -1157,6 +1157,7 @@ pub fn build_ui(app: &Application) {
     {
         let drv = driver.clone();
         let duty = ch1_duty_spin.clone();
+        let preview = ch1_preview.clone();
         ch1_wave.connect_changed(move |combo| {
             if let Some(id) = combo.active_id() {
                 let name = id.to_string();
@@ -1167,6 +1168,7 @@ pub fn build_ui(app: &Application) {
                     let _ = d.set_waveform(1, &name);
                 });
                 duty.set_sensitive(has_duty);
+                preview.queue_draw();
             }
         });
     }
@@ -1207,6 +1209,7 @@ pub fn build_ui(app: &Application) {
     }
     {
         let drv = driver.clone();
+        let preview = ch1_preview.clone();
         ch1_duty_adj.connect_value_changed(move |adj| {
             let v = adj.value();
             let drv = drv.clone();
@@ -1214,6 +1217,7 @@ pub fn build_ui(app: &Application) {
                 let mut d = drv.lock().unwrap();
                 let _ = d.set_dutycycle(1, v);
             });
+            preview.queue_draw();
         });
     }
 
@@ -1233,6 +1237,7 @@ pub fn build_ui(app: &Application) {
     {
         let drv = driver.clone();
         let duty = ch2_duty_spin.clone();
+        let preview = ch2_preview.clone();
         ch2_wave.connect_changed(move |combo| {
             if let Some(id) = combo.active_id() {
                 let name = id.to_string();
@@ -1243,6 +1248,7 @@ pub fn build_ui(app: &Application) {
                     let _ = d.set_waveform(2, &name);
                 });
                 duty.set_sensitive(has_duty);
+                preview.queue_draw();
             }
         });
     }
@@ -1283,6 +1289,7 @@ pub fn build_ui(app: &Application) {
     }
     {
         let drv = driver.clone();
+        let preview = ch2_preview.clone();
         ch2_duty_adj.connect_value_changed(move |adj| {
             let v = adj.value();
             let drv = drv.clone();
@@ -1290,6 +1297,7 @@ pub fn build_ui(app: &Application) {
                 let mut d = drv.lock().unwrap();
                 let _ = d.set_dutycycle(2, v);
             });
+            preview.queue_draw();
         });
     }
 
