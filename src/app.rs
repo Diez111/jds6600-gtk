@@ -777,6 +777,30 @@ pub fn build_ui(app: &Application) {
         
         grid.attach(&freq_box, 1, 1, 2, 1);
 
+        // Botones de presets de frecuencia - agregados directamente en el grid
+        let presets_box = GtkBox::new(Orientation::Horizontal, 4);
+        presets_box.set_halign(Align::Center);
+        presets_box.set_hexpand(true);
+        presets_box.set_margin_top(4);
+        presets_box.set_margin_bottom(4);
+        
+        let freq_presets: &[(f64, &str)] = &[
+            (50.0, "50Hz"), (100.0, "100Hz"), (1000.0, "1kHz"),
+            (10_000.0, "10kHz"), (100_000.0, "100kHz"),
+            (1_000_000.0, "1MHz"), (10_000_000.0, "10MHz"),
+        ];
+        
+        for &(freq, label) in freq_presets {
+            let btn = Button::with_label(label);
+            btn.add_css_class("freq-preset");
+            let adj_preset = freq_adj.clone();
+            btn.connect_clicked(move |_| {
+                adj_preset.set_value(freq);
+            });
+            presets_box.append(&btn);
+        }
+        grid.attach(&presets_box, 0, 2, 3, 1);
+
         let amp_label = Label::new(Some("AMPLITUD"));
         amp_label.add_css_class("param-label");
         amp_label.set_xalign(0.0);
@@ -1323,43 +1347,6 @@ pub fn build_ui(app: &Application) {
             });
         });
         
-        // Botones de presets de frecuencia
-        let presets_box = GtkBox::new(Orientation::Horizontal, 4);
-        presets_box.set_halign(Align::Center);
-        presets_box.set_hexpand(true);
-        presets_box.set_margin_top(4);
-        presets_box.set_margin_bottom(4);
-        
-        let freq_presets: &[(f64, &str)] = &[
-            (50.0, "50Hz"), (100.0, "100Hz"), (1000.0, "1kHz"),
-            (10_000.0, "10kHz"), (100_000.0, "100kHz"),
-            (1_000_000.0, "1MHz"), (10_000_000.0, "10MHz"),
-        ];
-        
-        for &(freq, label) in freq_presets {
-            let btn = Button::with_label(label);
-            btn.add_css_class("freq-preset");
-            let adj_preset = adj.clone();
-            let is_editing_preset = is_editing.clone();
-            let drv_preset = drv.clone();
-            btn.connect_clicked(move |_| {
-                // Desactivar flag de edición para que se envíe al generador
-                *is_editing_preset.borrow_mut() = false;
-                adj_preset.set_value(freq);
-                // Enviar inmediatamente al generador
-                let drv = drv_preset.clone();
-                std::thread::spawn(move || {
-                    let mut d = drv.lock().unwrap();
-                    let _ = d.set_frequency(1, freq);
-                });
-            });
-            presets_box.append(&btn);
-        }
-        
-        // Agregar presets_box al grid en la fila 2
-        let grid = spin.parent().unwrap().downcast::<Grid>().unwrap();
-        grid.attach(&presets_box, 0, 2, 3, 1);
-        
         // Actualizar display cuando cambia la unidad
         let spin_unit = spin.clone();
         let adj_unit = adj.clone();
@@ -1509,43 +1496,6 @@ pub fn build_ui(app: &Application) {
                 let _ = d.set_frequency(2, hz);
             });
         });
-        
-        // Botones de presets de frecuencia
-        let presets_box = GtkBox::new(Orientation::Horizontal, 4);
-        presets_box.set_halign(Align::Center);
-        presets_box.set_hexpand(true);
-        presets_box.set_margin_top(4);
-        presets_box.set_margin_bottom(4);
-        
-        let freq_presets: &[(f64, &str)] = &[
-            (50.0, "50Hz"), (100.0, "100Hz"), (1000.0, "1kHz"),
-            (10_000.0, "10kHz"), (100_000.0, "100kHz"),
-            (1_000_000.0, "1MHz"), (10_000_000.0, "10MHz"),
-        ];
-        
-        for &(freq, label) in freq_presets {
-            let btn = Button::with_label(label);
-            btn.add_css_class("freq-preset");
-            let adj_preset = adj.clone();
-            let is_editing_preset = is_editing.clone();
-            let drv_preset = drv.clone();
-            btn.connect_clicked(move |_| {
-                // Desactivar flag de edición para que se envíe al generador
-                *is_editing_preset.borrow_mut() = false;
-                adj_preset.set_value(freq);
-                // Enviar inmediatamente al generador
-                let drv = drv_preset.clone();
-                std::thread::spawn(move || {
-                    let mut d = drv.lock().unwrap();
-                    let _ = d.set_frequency(2, freq);
-                });
-            });
-            presets_box.append(&btn);
-        }
-        
-        // Agregar presets_box al grid en la fila 2
-        let grid = spin.parent().unwrap().downcast::<Grid>().unwrap();
-        grid.attach(&presets_box, 0, 2, 3, 1);
         
         // Actualizar display cuando cambia la unidad
         let spin_unit = spin.clone();
