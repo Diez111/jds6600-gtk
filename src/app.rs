@@ -157,20 +157,26 @@ fn dark_css() -> &'static str {
     }
 
     .freq-preset {
-        background-color: #0d1117;
-        color: #7d8590;
-        border: 1px solid #21262d;
-        border-radius: 4px;
-        padding: 2px 6px;
-        font-size: 10px;
+        background-color: #161b22;
+        color: #8b949e;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 11px;
         font-weight: 600;
-        font-family: monospace;
-        min-height: 24px;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        min-height: 28px;
+        transition: all 0.15s ease;
     }
     .freq-preset:hover {
         border-color: #58a6ff;
         color: #58a6ff;
-        background-color: #0d1b2a;
+        background-color: #1c2333;
+        transform: translateY(-1px);
+    }
+    .freq-preset:active {
+        transform: translateY(0);
+        background-color: #0d1117;
     }
 
     .freq-entry {
@@ -418,20 +424,26 @@ fn light_css() -> &'static str {
     }
 
     .freq-preset {
-        background-color: #f6f8fa;
+        background-color: #ffffff;
         color: #656d76;
         border: 1px solid #d0d7de;
-        border-radius: 4px;
-        padding: 2px 6px;
-        font-size: 10px;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 11px;
         font-weight: 600;
-        font-family: monospace;
-        min-height: 24px;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        min-height: 28px;
+        transition: all 0.15s ease;
     }
     .freq-preset:hover {
         border-color: #0969da;
         color: #0969da;
-        background-color: #ddf4ff;
+        background-color: #f0f6ff;
+        transform: translateY(-1px);
+    }
+    .freq-preset:active {
+        transform: translateY(0);
+        background-color: #e6edf3;
     }
 
     .freq-entry {
@@ -764,23 +776,6 @@ pub fn build_ui(app: &Application) {
         freq_box.append(&freq_unit_combo);
         
         grid.attach(&freq_box, 1, 1, 2, 1);
-
-        let presets_box = GtkBox::new(Orientation::Horizontal, 3);
-        presets_box.set_halign(Align::Center);
-        presets_box.set_hexpand(true);
-        let freq_presets: &[(f64, &str)] = &[
-            (50.0, "50Hz"), (100.0, "100Hz"), (1000.0, "1kHz"),
-            (10_000.0, "10kHz"), (100_000.0, "100kHz"),
-            (1_000_000.0, "1MHz"), (10_000_000.0, "10MHz"),
-        ];
-        for &(freq, label) in freq_presets {
-            let btn = Button::with_label(label);
-            btn.add_css_class("freq-preset");
-            let adj = freq_adj.clone();
-            btn.connect_clicked(move |_| { adj.set_value(freq); });
-            presets_box.append(&btn);
-        }
-        grid.attach(&presets_box, 0, 2, 3, 1);
 
         let amp_label = Label::new(Some("AMPLITUD"));
         amp_label.add_css_class("param-label");
@@ -1328,6 +1323,43 @@ pub fn build_ui(app: &Application) {
             });
         });
         
+        // Botones de presets de frecuencia
+        let presets_box = GtkBox::new(Orientation::Horizontal, 4);
+        presets_box.set_halign(Align::Center);
+        presets_box.set_hexpand(true);
+        presets_box.set_margin_top(4);
+        presets_box.set_margin_bottom(4);
+        
+        let freq_presets: &[(f64, &str)] = &[
+            (50.0, "50Hz"), (100.0, "100Hz"), (1000.0, "1kHz"),
+            (10_000.0, "10kHz"), (100_000.0, "100kHz"),
+            (1_000_000.0, "1MHz"), (10_000_000.0, "10MHz"),
+        ];
+        
+        for &(freq, label) in freq_presets {
+            let btn = Button::with_label(label);
+            btn.add_css_class("freq-preset");
+            let adj_preset = adj.clone();
+            let is_editing_preset = is_editing.clone();
+            let drv_preset = drv.clone();
+            btn.connect_clicked(move |_| {
+                // Desactivar flag de edición para que se envíe al generador
+                *is_editing_preset.borrow_mut() = false;
+                adj_preset.set_value(freq);
+                // Enviar inmediatamente al generador
+                let drv = drv_preset.clone();
+                std::thread::spawn(move || {
+                    let mut d = drv.lock().unwrap();
+                    let _ = d.set_frequency(1, freq);
+                });
+            });
+            presets_box.append(&btn);
+        }
+        
+        // Agregar presets_box al grid en la fila 2
+        let grid = spin.parent().unwrap().downcast::<Grid>().unwrap();
+        grid.attach(&presets_box, 0, 2, 3, 1);
+        
         // Actualizar display cuando cambia la unidad
         let spin_unit = spin.clone();
         let adj_unit = adj.clone();
@@ -1477,6 +1509,43 @@ pub fn build_ui(app: &Application) {
                 let _ = d.set_frequency(2, hz);
             });
         });
+        
+        // Botones de presets de frecuencia
+        let presets_box = GtkBox::new(Orientation::Horizontal, 4);
+        presets_box.set_halign(Align::Center);
+        presets_box.set_hexpand(true);
+        presets_box.set_margin_top(4);
+        presets_box.set_margin_bottom(4);
+        
+        let freq_presets: &[(f64, &str)] = &[
+            (50.0, "50Hz"), (100.0, "100Hz"), (1000.0, "1kHz"),
+            (10_000.0, "10kHz"), (100_000.0, "100kHz"),
+            (1_000_000.0, "1MHz"), (10_000_000.0, "10MHz"),
+        ];
+        
+        for &(freq, label) in freq_presets {
+            let btn = Button::with_label(label);
+            btn.add_css_class("freq-preset");
+            let adj_preset = adj.clone();
+            let is_editing_preset = is_editing.clone();
+            let drv_preset = drv.clone();
+            btn.connect_clicked(move |_| {
+                // Desactivar flag de edición para que se envíe al generador
+                *is_editing_preset.borrow_mut() = false;
+                adj_preset.set_value(freq);
+                // Enviar inmediatamente al generador
+                let drv = drv_preset.clone();
+                std::thread::spawn(move || {
+                    let mut d = drv.lock().unwrap();
+                    let _ = d.set_frequency(2, freq);
+                });
+            });
+            presets_box.append(&btn);
+        }
+        
+        // Agregar presets_box al grid en la fila 2
+        let grid = spin.parent().unwrap().downcast::<Grid>().unwrap();
+        grid.attach(&presets_box, 0, 2, 3, 1);
         
         // Actualizar display cuando cambia la unidad
         let spin_unit = spin.clone();
