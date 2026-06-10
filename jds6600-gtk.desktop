@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=JDS6600 Signal Generator
+Comment=Control profesional de generador de señales JDS6600
+Exec=/usr/bin/jds6600-gtk
+Icon=jds6600-gtk
+Terminal=false
+Type=Application
+Categories=Science;Electronics;
+Keywords=signal;generator;jds6600;electronics;
+StartupNotify=true

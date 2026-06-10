@@ -110,6 +110,8 @@ El protocolo serial del JDS6600 solo expone control básico: forma de onda, frec
 
 ## Compilación
 
+### Desde código fuente
+
 ```bash
 git clone https://github.com/Diez111/jds6600-gtk.git
 cd jds6600-gtk
@@ -118,18 +120,30 @@ cargo build --release
 
 El binario se genera en `target/release/jds6600-gtk`.
 
+### Instalación desde paquete .deb (Debian/Ubuntu)
+
+```bash
+# Descargar el paquete .deb desde Releases
+sudo dpkg -i jds6600-gtk_0.2.2_amd64.deb
+
+# O construir el paquete localmente
+./build-deb.sh
+sudo dpkg -i jds6600-gtk_0.2.2_amd64.deb
+```
+
+### Desinstalar
+
+```bash
+sudo dpkg -r jds6600-gtk
+```
+
 ### Ejecutar
 
 ```bash
 ./target/release/jds6600-gtk
 ```
 
-O crear un script `run.sh`:
-```bash
-#!/bin/bash
-cd "$(dirname "$0")"
-./target/release/jds6600-gtk
-```
+O desde el menú de aplicaciones de GNOME (después de instalar el .deb).
 
 ---
 
