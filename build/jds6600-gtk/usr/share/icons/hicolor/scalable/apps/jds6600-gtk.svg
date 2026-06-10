@@ -10,6 +10,26 @@
     </filter>
   </defs>
   
+  <!-- Fondo oscuro redondeado -->
+  <rect x="4" y="4" width="120" height="120" rx="24" fill="#0d1117" stroke="#30363d" stroke-width="2"/>
+  
+  <!-- Grid de osciloscopio -->
+  <g stroke="#21262d" stroke-width="0.5" opacity="0.6">
+    <line x1="20" y1="30" x2="108" y2="30"/>
+    <line x1="20" y1="50" x2="108" y2="50"/>
+    <line x1="20" y1="70" x2="108" y2="70"/>
+    <line x1="20" y1="90" x2="108" y2="90"/>
+    <line x1="35" y1="20" x2="35" y2="100"/>
+    <line x1="50" y1="20" x2="50" y2="100"/>
+    <line x1="65" y1="20" x2="65" y2="100"/>
+    <line x1="80" y1="20" x2="80" y2="100"/>
+    <line x1="95" y1="20" x2="95" y2="100"/>
+  </g>
+  
+  <!-- Ejes centrales -->
+  <line x1="20" y1="60" x2="108" y2="60" stroke="#484f58" stroke-width="1"/>
+  <line x1="64" y1="20" x2="64" y2="100" stroke="#484f58" stroke-width="1"/>
+  
   <!-- Onda senoidal CH1 (naranja) -->
   <path d="M 10,64 C 25,20 40,20 55,64 C 70,108 85,108 100,64 C 115,20 125,20 130,64" 
         fill="none" stroke="#f0883e" stroke-width="4" stroke-linecap="round" filter="url(#glow)"/>

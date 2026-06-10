@@ -1,10 +1,10 @@
 Package: jds6600-gtk
-Version: 0.2.3
+Version: 0.2.4
 Section: science
 Priority: optional
 Architecture: amd64
 Depends: libc6 (>= 2.31), libgtk-4-1 (>= 4.6), libcairo2 (>= 1.14)
-Installed-Size: 1400
+Installed-Size: 1404
 Maintainer: Diez111 <diez@example.com>
 Description: Generador de Señales JDS6600
  Aplicación de escritorio nativa en Rust + GTK4 para controlar
