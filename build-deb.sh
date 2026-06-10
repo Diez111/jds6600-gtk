@@ -5,7 +5,7 @@
 set -e
 
 PACKAGE_NAME="jds6600-gtk"
-VERSION="0.2.2"
+VERSION="0.2.3"
 ARCH="amd64"
 
 echo "Construyendo paquete .deb para $PACKAGE_NAME v$VERSION..."
@@ -16,7 +16,12 @@ mkdir -p build/$PACKAGE_NAME/DEBIAN
 mkdir -p build/$PACKAGE_NAME/usr/bin
 mkdir -p build/$PACKAGE_NAME/usr/share/applications
 mkdir -p build/$PACKAGE_NAME/usr/share/icons/hicolor/scalable/apps
+mkdir -p build/$PACKAGE_NAME/usr/share/icons/hicolor/16x16/apps
+mkdir -p build/$PACKAGE_NAME/usr/share/icons/hicolor/32x32/apps
+mkdir -p build/$PACKAGE_NAME/usr/share/icons/hicolor/48x48/apps
+mkdir -p build/$PACKAGE_NAME/usr/share/icons/hicolor/64x64/apps
 mkdir -p build/$PACKAGE_NAME/usr/share/icons/hicolor/128x128/apps
+mkdir -p build/$PACKAGE_NAME/usr/share/icons/hicolor/256x256/apps
 
 # Copiar binario
 cp target/release/$PACKAGE_NAME build/$PACKAGE_NAME/usr/bin/
@@ -27,12 +32,13 @@ cp $PACKAGE_NAME.desktop build/$PACKAGE_NAME/usr/share/applications/
 # Copiar icono SVG
 cp $PACKAGE_NAME.svg build/$PACKAGE_NAME/usr/share/icons/hicolor/scalable/apps/
 
-# Generar icono PNG de 128x128 (si inkscape está disponible)
-if command -v inkscape &> /dev/null; then
-    inkscape --export-type=png --export-filename=build/$PACKAGE_NAME/usr/share/icons/hicolor/128x128/apps/$PACKAGE_NAME.png --export-width=128 --export-height=128 $PACKAGE_NAME.svg 2>/dev/null || echo "Warning: No se pudo generar PNG"
-else
-    echo "Warning: inkscape no está instalado, solo se incluirá SVG"
-fi
+# Copiar iconos PNG
+for size in 16 32 48 64 128 256; do
+    if [ -f "$PACKAGE_NAME-${size}.png" ]; then
+        cp $PACKAGE_NAME-${size}.png build/$PACKAGE_NAME/usr/share/icons/hicolor/${size}x${size}/apps/$PACKAGE_NAME.png
+        echo "✓ Icono ${size}x${size} copiado"
+    fi
+done
 
 # Crear archivo DEBIAN/control
 cat > build/$PACKAGE_NAME/DEBIAN/control << EOF
@@ -44,7 +50,7 @@ Architecture: $ARCH
 Depends: libc6 (>= 2.31), libgtk-4-1 (>= 4.6), libcairo2 (>= 1.14)
 Installed-Size: $(du -sk build/$PACKAGE_NAME/usr | cut -f1)
 Maintainer: Diez111 <diez@example.com>
-Description: Control profesional de generador de señales JDS6600
+Description: Generador de Señales JDS6600
  Aplicación de escritorio nativa en Rust + GTK4 para controlar
  generadores de señales JDS6600 a través de puerto serial USB.
  .
@@ -66,6 +72,7 @@ chmod 644 build/$PACKAGE_NAME/usr/share/icons/hicolor/scalable/apps/$PACKAGE_NAM
 # Construir el paquete
 dpkg-deb --build build/$PACKAGE_NAME ${PACKAGE_NAME}_${VERSION}_${ARCH}.deb
 
+echo ""
 echo "✓ Paquete creado: ${PACKAGE_NAME}_${VERSION}_${ARCH}.deb"
 echo ""
 echo "Para instalar:"

@@ -124,11 +124,11 @@ El binario se genera en `target/release/jds6600-gtk`.
 
 ```bash
 # Descargar el paquete .deb desde Releases
-sudo dpkg -i jds6600-gtk_0.2.2_amd64.deb
+sudo dpkg -i jds6600-gtk_0.2.3_amd64.deb
 
 # O construir el paquete localmente
 ./build-deb.sh
-sudo dpkg -i jds6600-gtk_0.2.2_amd64.deb
+sudo dpkg -i jds6600-gtk_0.2.3_amd64.deb
 ```
 
 ### Desinstalar

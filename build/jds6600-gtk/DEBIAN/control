@@ -1,0 +1,20 @@
+Package: jds6600-gtk
+Version: 0.2.3
+Section: science
+Priority: optional
+Architecture: amd64
+Depends: libc6 (>= 2.31), libgtk-4-1 (>= 4.6), libcairo2 (>= 1.14)
+Installed-Size: 1400
+Maintainer: Diez111 <diez@example.com>
+Description: Generador de Señales JDS6600
+ Aplicación de escritorio nativa en Rust + GTK4 para controlar
+ generadores de señales JDS6600 a través de puerto serial USB.
+ .
+ Características:
+ - Auto-detección plug & play del dispositivo
+ - Modo claro/oscuro
+ - Entrada de frecuencia editable con unidades (Hz/kHz/MHz)
+ - 17 formas de onda
+ - 8 presets guardables
+ - Vista previa de osciloscopio en tiempo real
+ - Control de amplitud, offset y duty cycle
