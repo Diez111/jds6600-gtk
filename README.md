@@ -327,6 +327,15 @@ El JDS6600 tiene límites físicos que la aplicación respeta:
 
 ## Changelog
 
+### v0.2.2 — Fix de presets y crash
+
+**Correcciones:**
+- Fix de crash: `downcast::<Grid>().unwrap()` fallaba porque el padre del SpinButton es un GtkBox
+- Botones de presets movidos a `build_channel_panel` con acceso directo al Grid
+- Presets funcionales: cambian el valor del Adjustment inmediatamente
+- CSS mejorado para botones de presets (transiciones, hover effects)
+- Timeout reducido a 200ms para respuesta más rápida
+
 ### v0.2.1 — Protección de entrada de frecuencia
 
 **Correcciones críticas:**
@@ -371,8 +380,11 @@ El JDS6600 tiene límites físicos que la aplicación respeta:
 - Fix de edición de frecuencia: el polling no interrumpe la edición del usuario
   - Flags `is_editing` bloquean actualizaciones del SpinButton mientras se edita
   - Cambio se aplica al presionar Enter o perder el foco
-  - `connect_value_changed` bloqueado durante edición manual
-- Timeout normalizado a 1 segundo (como el proyecto Python de referencia)
+  - `connect_value_changed` envía inmediatamente al generador
+- Fix de presets de frecuencia: botones reposicionados y funcionales
+  - Agregados directamente en `build_channel_panel` con acceso al Grid
+  - Cambian el valor del Adjustment inmediatamente
+- Timeout normalizado a 200ms (respuesta más rápida del generador)
 - Delay post-conexión de 400ms para arranque del MCU
 
 **Documentación:**
