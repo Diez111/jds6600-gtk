@@ -89,10 +89,6 @@ Aplicación de escritorio nativa para controlar generadores de señales **JDS660
 
 ![Modo Claro](screenshots/light-mode.png)
 
-### Conexión exitosa
-
-![Conectado](screenshots/connected.png)
-
 ---
 
 ## Requisitos
