@@ -5,7 +5,7 @@
 set -e
 
 PACKAGE_NAME="jds6600-gtk"
-VERSION="0.2.4"
+VERSION="0.2.5"
 ARCH="amd64"
 
 echo "Construyendo paquete .deb para $PACKAGE_NAME v$VERSION..."
